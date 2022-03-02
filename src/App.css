@@ -1,0 +1,87 @@
+.mainContainer {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.dataContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 600px;
+}
+
+.dataContainer > img {
+  box-shadow: 2px 2px 2px 1px rgba(0, 0, 255, 0.2);
+  border-radius: 5px;
+}
+
+.header {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 500;
+  margin-top: -25px;
+}
+
+.headerP1 {
+  margin-top: -10px;
+  font-size: 17px;
+  letter-spacing: 1.5px;
+}
+.headerP2 {
+  margin-top: -15px;
+  font-size: 15px;
+  letter-spacing: 1.5px;
+}
+
+.connectBold {
+  color: red;
+  font-weight: 800;
+}
+.emojis {
+  margin-right: 20px;
+  font-size: 25px;
+}
+
+.rules {
+  margin-left: 30px;
+  line-height: 1.5;
+  font-size: 13px;
+  text-align: left;
+  margin-top: -5px;
+  margin-bottom: 0;
+  color: #69636f;
+}
+.rulesLink {
+  color: #69636f;
+}
+
+.waveButton {
+  cursor: pointer;
+  margin-top: 16px;
+  padding: 8px;
+  border: 0;
+  border-radius: 5px;
+  background-color: lightgray;
+}
+
+.favFood {
+  color: #6a1b9a;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.form {
+  text-align: center;
+  color: gray;
+  margin-top: 15px;
+}
+
+.formInput {
+  width: 400px;
+  height: 50px;
+  border-radius: 5px;
+  border: 1px solid #d5d4d8;
+  text-indent: 5px;
+}
