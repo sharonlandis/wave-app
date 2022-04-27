@@ -1,57 +1,60 @@
+* {
+  box-sizing: border-box;
+  font-family: "Abel", sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
 .mainContainer {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  margin-top: 10px;
+  padding: 0 30px;
 }
 
 .dataContainer {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   max-width: 600px;
+  padding: 20px 0 40px 0;
+  margin: 0 auto;
 }
 
-.dataContainer > img {
+.dataContainer img {
   box-shadow: 2px 2px 2px 1px rgba(0, 0, 255, 0.2);
   border-radius: 5px;
 }
 
-.header {
+.dataContainer h1 {
   text-align: center;
-  font-size: 22px;
+  font-size: 40px;
   font-weight: 500;
-  margin-top: -25px;
 }
 
-.headerP1 {
-  margin-top: -10px;
-  font-size: 17px;
-  letter-spacing: 1.5px;
+@media only screen and (max-width: 600px) {
+  .dataContainer h1 {
+    font-size: 25px;
+    font-weight: 600;
+  }
 }
-.headerP2 {
-  margin-top: -15px;
-  font-size: 15px;
-  letter-spacing: 1.5px;
+@media only screen and (max-width: 450px) {
+  .dataContainer h1 {
+    font-size: 18px;
+  }
 }
 
 .connectBold {
   color: red;
   font-weight: 800;
-}
-.emojis {
-  margin-right: 20px;
-  font-size: 25px;
+  padding-top: 5px;
 }
 
 .rules {
-  margin-left: 30px;
-  line-height: 1.5;
+  line-height: 1.9;
   font-size: 13px;
   text-align: left;
-  margin-top: -5px;
-  margin-bottom: 0;
   color: #69636f;
+  margin: 0 auto;
 }
 .rulesLink {
   color: #69636f;
@@ -66,10 +69,35 @@
   background-color: lightgray;
 }
 
+.address {
+  overflow-wrap: break-word;
+  padding-bottom: 5px;
+  padding-top: 5px;
+}
+.msgTime {
+  padding-bottom: 7px;
+}
+
 .favFood {
   color: #6a1b9a;
   font-weight: bold;
   margin-bottom: 20px;
+}
+
+.spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.spinnerMessage {
+  font-family: cursive;
+  color: purple;
+  font-size: 20px;
+  font-weight: 600;
+  font-style: italic;
 }
 
 .form {
@@ -79,7 +107,7 @@
 }
 
 .formInput {
-  width: 400px;
+  width: 90%;
   height: 50px;
   border-radius: 5px;
   border: 1px solid #d5d4d8;

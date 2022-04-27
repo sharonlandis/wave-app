@@ -2,52 +2,76 @@ import React, { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import "./App.css";
 import abi from "./utils/WavePortal.json";
-import ProgressBar from "./ProgressBar";
 import food1 from "./food.png";
 import instructions from "./walletInstructions.pdf";
-import Emoji from "a11y-react-emoji";
+import { css } from "@emotion/react";
+import GridLoader from "react-spinners/GridLoader";
+// import { ethErrors } from "eth-rpc-errors";
 
 function App() {
-  const [currentAccount, setCurrentAccount] = useState("");
+  const [currentAccount, setCurrentAccount] = useState(null);
   const [allWaves, setAllWaves] = useState([]);
   const [totalWaves, setTotalWaves] = useState(0);
   const [waverMsg, setWaverMsg] = useState("");
-  const [progress, setProgress] = useState(0);
-  const [requestConnect, setConnectRequest] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [requestConnect, setRequestConnect] = useState(false);
+  const [error, setError] = useState(null);
 
   const contractAddress = "0x4fe1043cfea32d20586f2116b082866817b92356";
   const contractABI = abi.abi;
 
   const checkIfWalletIsConnected = async () => {
     try {
+      setError(null);
       const { ethereum } = window;
 
       if (!ethereum) {
-        console.log("Install the MetaMask browser extension!");
+        setError("Install the MetaMask browser extension!");
+        return;
       } else {
-        console.log("We have the ethereum object", ethereum);
+        console.log("We have the ethereum object"); //
+      }
+
+      // window.ethereum injects ethereum object into the browser, but does not guarantee
+      // access to users account is not aivailable until ethereum._state.isConnected is true
+      // If false need to reload window. Can't auto load page (window.location.reload()).
+      // as it may take several page loads for ethereum to fully connect, and continually reloading .
+      // page creates a choppy UE
+      // Issue has been raised to MetaMask forum.
+      // For now instruct user to wait 1 minute and reload page
+
+      if (!ethereum._state.isConnected) {
+        setError("MetaMask not available. Wait 1 minute then, reload page.");
+        return;
+      }
+
+      // There was pending wallet connect and user connected manually => no longer request connect
+      if (requestConnect && ethereum.accounts?.length > 0)
+        setRequestConnect(false);
+      // else pending wallet connect persists
+      // User clicked "Connect Your Wallet" and did not complete MM popup to connect.
+      //  User has to open MM popup manually.
+      else if (requestConnect) {
+        setError("Open MetaMask extension manually to complete wallet connect");
+        return;
       }
 
       const accounts = await ethereum.request({ method: "eth_accounts" });
 
-      if (accounts.length === 0) {
-        console.log("No authorized account found");
-      } else {
+      if (accounts.length !== 0) {
         const account = accounts[0];
-        console.log("Found an authorized account:", account);
         setCurrentAccount(account);
+        setRequestConnect(false);
+        console.log("Found an authorized account:", account);
+      } else {
+        // no error msg here, user loaded page and hasn't done else anything
+        console.log("No authorized account found");
+        return;
       }
-      // if (accounts.length !== 0) {
-      //   const account = accounts[0];
-      //   console.log("Found an authorized account:", account);
-      //   setCurrentAccount(account);
-      // } else {
-      //   alert("Connect your wallet");
-      //   console.log("No authorized account found");
-      //   return;
-      // }
     } catch (error) {
-      console.log(error);
+      console.log("2 ", error.code);
+      console.log("2 ", error.message);
+      setError("Something went wrong");
     }
   };
 
@@ -59,15 +83,23 @@ function App() {
       const { ethereum } = window;
 
       if (!ethereum) {
-        // alert("Get MetaMask!");
+        setError("Error: Install the MetaMask browser extension!");
         return;
       }
+
+      setRequestConnect(true);
+
       const accounts = await ethereum.request({
         method: "eth_requestAccounts",
       });
-      console.log("Connected", accounts[0]);
       setCurrentAccount(accounts[0]);
+      setRequestConnect(false);
+      setError(false);
+      console.log("Connected", accounts[0]);
     } catch (error) {
+      if (error.code === -32002) {
+        setError("Open MetaMask extension manually to complete wallet connect");
+      }
       console.log(error);
     }
   };
@@ -76,13 +108,28 @@ function App() {
     try {
       checkIfWalletIsConnected();
       if (!currentAccount) {
-        setConnectRequest(true);
+        if (requestConnect) {
+          setError(
+            "Open MetaMask extension manually to complete wallet connect"
+          );
+        } else {
+          setError("Connect your wallet");
+        }
         return;
       }
 
       const { ethereum } = window;
 
       if (ethereum) {
+        // Make sure user is on Ropsten
+        const chainId = await ethereum.request({ method: "eth_chainId" });
+        const ropstenChainId = "0x3";
+        console.log("chainId ", chainId);
+        if (chainId !== ropstenChainId) {
+          setError("Switch to the Ropsten Test Network!");
+          return;
+        }
+
         const provider = new ethers.providers.Web3Provider(ethereum);
         const signer = provider.getSigner();
         const wavePortalContract = new ethers.Contract(
@@ -90,7 +137,6 @@ function App() {
           contractABI,
           signer
         );
-        setProgress(60);
 
         let count = await wavePortalContract.getTotalWaves();
         console.log("Retrieved total wave count...", count.toNumber());
@@ -98,10 +144,12 @@ function App() {
         /*
          * Execute the actual wave from your smart contract
          */
+
         const waveTxn = await wavePortalContract.wave(waverMsg);
 
         console.log("Mining...", waveTxn.hash);
 
+        setLoading(true);
         await waveTxn.wait();
         console.log("Mined -- ", waveTxn.hash);
 
@@ -111,13 +159,19 @@ function App() {
 
         setTotalWaves(count.toNumber());
         getAllWaves();
-        setProgress(0);
+        setLoading(false);
         setWaverMsg("");
       } else {
-        console.log("Ethereum object doesn't exist!");
+        console.log("Ethereum object doesn't exist in browser!");
       }
     } catch (error) {
-      console.log(error);
+      setLoading(false);
+      console.log("1 ", error.code);
+      console.log("1 ", error.message);
+      if (error.code === 4001) setError("Transaction cancelled");
+      else if (error.message.includes("Wait 1 minute"))
+        setError("Wait 1 minute to waive again");
+      else setError("Something went wrong");
     }
   };
 
@@ -142,7 +196,6 @@ function App() {
             message: wave.message,
           };
         });
-
         setAllWaves(wavesCleaned);
       } else {
         console.log("Ethereum object doesn't exist!");
@@ -151,6 +204,11 @@ function App() {
       console.log(error);
     }
   };
+
+  const override = css`
+    display: block;
+    margin: 20px;
+  `;
 
   useEffect(() => {
     checkIfWalletIsConnected();
@@ -169,10 +227,7 @@ function App() {
 
     const onNewWave = async (from, timestamp, message) => {
       const currentAccount = await getCurrentAccount();
-      console.log("OnNewWave > currentAcct ", currentAccount);
-      console.log("OnNewWave > from ", from);
       if (currentAccount.toLowerCase() === from.toLowerCase()) {
-        console.log("It's my wave");
         return;
       }
       console.log("NewWave", from, timestamp, message);
@@ -198,29 +253,20 @@ function App() {
     }
 
     return () => {
-      console.log("cleanup");
       if (wavePortalContract) {
         wavePortalContract.off("NewWave", onNewWave);
       }
     };
-  }, [contractABI, currentAccount]);
+  }, []);
 
   return (
     <div className="mainContainer">
       <div className="dataContainer">
         <img src={food1} alt="Comfort food" />
-        <div className="header">
-          <h1>What's your favorite comfort food?</h1>
-          <p className="headerP1">
-            Add your favorite comfort food to The Comfort Food Chain.
-          </p>
-          <p className="headerP2">
-            Can't decide on one favorite? Add two or three!
-          </p>
-        </div>
+        <h1>Add your favorite comfort food to The Comfort Food Chain</h1>
         <ol className="rules">
           <li>
-            Connect your Ethereum Ropsten wallet.{" "}
+            Connect your Ethereum wallet.{" "}
             <a
               className="rulesLink"
               href={instructions}
@@ -230,23 +276,22 @@ function App() {
               Click here to find out how
             </a>
           </li>
+          <li>In your MetaMask wallet, go to the Ropsten testnet.</li>
           <li>Enter your favorite comfort food in the box below.</li>
-          <li>Click the "Wave at me" button.</li>
           <li>
-            After MM reports a completed transaction, scroll down to see your
-            entries.
+            Click the "Wave at me" button. Confirm the transaction in the MM
+            popup.
+          </li>
+          <li>
+            After the txn completes you'll see the Food Chain. Scroll down to
+            see your entry.
           </li>
           <li>Want to add another favorite food? Wait 1 minute.</li>
         </ol>
-        {!currentAccount && !requestConnect && (
+        {error && <div className="connectBold">{error}</div>}
+        {!currentAccount && (
           <button className="waveButton" onClick={connectWallet}>
-            Connect Your Wallet (link to instructions above)
-          </button>
-        )}
-        {!currentAccount && requestConnect && (
-          <button className="waveButton connectBold" onClick={connectWallet}>
-            <Emoji className="emojis" symbol="👋"></Emoji>
-            Connect Your Wallet (link to instructions above)
+            Connect Your MetaMask Wallet (instructions above)
           </button>
         )}
 
@@ -264,10 +309,15 @@ function App() {
           Wave at Me
         </button>
 
-        {progress === 60 && currentAccount && (
-          <ProgressBar bgcolor={"#6a1b9a"} completed={60} />
-        )}
-
+        <div className="spinner">
+          <GridLoader
+            color="purple"
+            loading={loading}
+            css={override}
+            size={10}
+          />
+          {loading && <div className="spinnerMessage">In Progress</div>}
+        </div>
         {totalWaves > 0 && <h2>Total Comfort Foods: {totalWaves}</h2>}
 
         {allWaves.map((wave, index) => {
@@ -280,9 +330,9 @@ function App() {
                 padding: "8px",
               }}
             >
-              <div>Address: {wave.address}</div>
-              <div>Time: {wave.timestamp.toString()}</div>
-              <div className="favFood">Comfort Food: {wave.message}</div>
+              <div className="address">{wave.address}</div>
+              <div className="msgTime">{wave.timestamp.toString()}</div>
+              <div className="favFood">Fav comfort food: {wave.message}</div>
             </div>
           );
         })}
